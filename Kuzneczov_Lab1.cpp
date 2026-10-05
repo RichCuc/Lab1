@@ -178,7 +178,7 @@ void saveStation(ofstream &file, CompressorStation station)
     file << station.stationClass << endl;
 }
 
-void saveData(Pipe pipe, CompressorStation station)
+void saveData(Pipe pipe, CompressorStation station, bool pipeExists, bool stationExists)
 {
     ofstream file("data.txt");
     if (!file)
@@ -186,12 +186,14 @@ void saveData(Pipe pipe, CompressorStation station)
         cout << "File error" << endl;
         return;
     }
-    savePipe(file, pipe);
-    saveStation(file, station);
+    file << "PIPE_STATION" << endl;
+    file << pipeExists << " " << stationExists << endl;
+    if (pipeExists) savePipe(file, pipe);
+    if (stationExists) saveStation(file, station);
     cout << "Data saved" << endl;
 }
 
-bool loadData(Pipe &pipe, CompressorStation &station)
+bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &stationExists)
 {
     ifstream file("data.txt");
     if (!file)
@@ -202,23 +204,65 @@ bool loadData(Pipe &pipe, CompressorStation &station)
 
     Pipe loadedPipe;
     CompressorStation loadedStation;
+    bool loadedPipeExists = false;
+    bool loadedStationExists = false;
+    string firstLine;
 
-    getline(file, loadedPipe.name);
-    file >> loadedPipe.length >> loadedPipe.diameter >> loadedPipe.repair;
-    file >> ws;
-    getline(file, loadedStation.name);
-    file >> loadedStation.workshopCount >> loadedStation.workshopsInOperation >> loadedStation.stationClass;
+    getline(file, firstLine);
+    if (firstLine == "PIPE_STATION")
+    {
+        int pipeFlag;
+        int stationFlag;
+        if (!(file >> pipeFlag >> stationFlag) ||
+            (pipeFlag != 0 && pipeFlag != 1) ||
+            (stationFlag != 0 && stationFlag != 1) ||
+            (pipeFlag == 0 && stationFlag == 0))
+        {
+            cout << "File data error" << endl;
+            return false;
+        }
+        loadedPipeExists = pipeFlag == 1;
+        loadedStationExists = stationFlag == 1;
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    else
+    {
+        loadedPipeExists = true;
+        loadedStationExists = true;
+        file.clear();
+        file.seekg(0);
+    }
 
-    if (!file || loadedPipe.name.empty() || loadedStation.name.empty() ||
-        !isfinite(loadedPipe.length) || loadedPipe.length <= 0 || loadedPipe.diameter <= 0 ||
-        loadedStation.workshopCount < 0 || loadedStation.workshopsInOperation < 0 ||
-        loadedStation.workshopsInOperation > loadedStation.workshopCount || loadedStation.stationClass < 0)
+    if (loadedPipeExists)
+    {
+        getline(file, loadedPipe.name);
+        file >> loadedPipe.length >> loadedPipe.diameter >> loadedPipe.repair;
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    if (loadedStationExists)
+    {
+        getline(file, loadedStation.name);
+        file >> loadedStation.workshopCount >> loadedStation.workshopsInOperation
+             >> loadedStation.stationClass;
+    }
+
+    if (!file ||
+        (loadedPipeExists &&
+         (loadedPipe.name.empty() || !isfinite(loadedPipe.length) ||
+          loadedPipe.length <= 0 || loadedPipe.diameter <= 0)) ||
+        (loadedStationExists &&
+         (loadedStation.name.empty() || loadedStation.workshopCount < 0 ||
+          loadedStation.workshopsInOperation < 0 ||
+          loadedStation.workshopsInOperation > loadedStation.workshopCount ||
+          loadedStation.stationClass < 0)))
     {
         cout << "File data error" << endl;
         return false;
     }
     pipe = loadedPipe;
     station = loadedStation;
+    pipeExists = loadedPipeExists;
+    stationExists = loadedStationExists;
     cout << "Data loaded" << endl;
     return true;
 }
@@ -270,15 +314,12 @@ int main()
                 else cout << "Station not added" << endl;
                 break;
             case 6:
-                if (pipeExists && stationExists) saveData(pipe, station);
-                else cout << "Add pipe and station first" << endl;
+                if (pipeExists || stationExists)
+                    saveData(pipe, station, pipeExists, stationExists);
+                else cout << "Add pipe or station first" << endl;
                 break;
             case 7:
-                if (loadData(pipe, station))
-                {
-                    pipeExists = true;
-                    stationExists = true;
-                }
+                loadData(pipe, station, pipeExists, stationExists);
                 break;
             case 0:
                 cout << "Exit" << endl;
