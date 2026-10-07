@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <sstream>
 #include <cmath>
 #include <limits>
 #include <cstdlib>
@@ -26,42 +25,36 @@ struct CompressorStation
 
 int readInt(string prompt, string error, int minValue, int maxValue)
 {
-    string line;
     int value;
-    char extra;
-
     cout << prompt;
-    while (getline(cin, line))
+
+    while (!(cin >> value) || value < minValue || value > maxValue || cin.peek() != '\n')
     {
-        istringstream input(line);
-        if (input >> value && !(input >> extra) &&
-            value >= minValue && value <= maxValue)
-        {
-            return value;
-        }
+        if (cin.eof()) exit(0);
         cout << error;
+        cin.clear();
+        cin.ignore(10000, '\n');
     }
-    exit(0);
+
+    cin.ignore(10000, '\n');
+    return value;
 }
 
 double readLength()
 {
-    string line;
     double value;
-    char extra;
-
     cout << "Enter pipe length (km): ";
-    while (getline(cin, line))
+
+    while (!(cin >> value) || !isfinite(value) || value <= 0 || cin.peek() != '\n')
     {
-        istringstream input(line);
-        if (input >> value && !(input >> extra) &&
-            isfinite(value) && value > 0)
-        {
-            return value;
-        }
+        if (cin.eof()) exit(0);
         cout << "Wrong value. Enter length again: ";
+        cin.clear();
+        cin.ignore(10000, '\n');
     }
-    exit(0);
+
+    cin.ignore(10000, '\n');
+    return value;
 }
 
 Pipe inputPipe()
