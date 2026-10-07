@@ -186,7 +186,8 @@ void saveData(Pipe pipe, CompressorStation station, bool pipeExists, bool statio
     cout << "Data saved" << endl;
 }
 
-bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &stationExists)
+bool loadData(Pipe &pipe, CompressorStation &station,
+              bool &pipeExists, bool &stationExists, int choice)
 {
     ifstream file("data.txt");
     if (!file)
@@ -194,13 +195,11 @@ bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &st
         cout << "File not found" << endl;
         return false;
     }
-
     Pipe loadedPipe;
     CompressorStation loadedStation;
     bool loadedPipeExists = false;
     bool loadedStationExists = false;
     string firstLine;
-
     getline(file, firstLine);
     if (firstLine == "PIPE_STATION")
     {
@@ -225,7 +224,6 @@ bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &st
         file.clear();
         file.seekg(0);
     }
-
     if (loadedPipeExists)
     {
         getline(file, loadedPipe.name);
@@ -238,7 +236,6 @@ bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &st
         file >> loadedStation.workshopCount >> loadedStation.workshopsInOperation
              >> loadedStation.stationClass;
     }
-
     if (!file ||
         (loadedPipeExists &&
          (loadedPipe.name.empty() || !isfinite(loadedPipe.length) ||
@@ -252,13 +249,31 @@ bool loadData(Pipe &pipe, CompressorStation &station, bool &pipeExists, bool &st
         cout << "File data error" << endl;
         return false;
     }
-    pipe = loadedPipe;
-    station = loadedStation;
-    pipeExists = loadedPipeExists;
-    stationExists = loadedStationExists;
+    if (choice == 1 && !loadedPipeExists)
+    {
+        cout << "Pipe not found in file" << endl;
+        return false;
+    }
+    if (choice == 2 && !loadedStationExists)
+    {
+        cout << "Station not found in file" << endl;
+        return false;
+    }
+
+    if (choice == 1 || choice == 3)
+    {
+        if (loadedPipeExists) pipe = loadedPipe;
+        pipeExists = loadedPipeExists;
+    }
+    if (choice == 2 || choice == 3)
+    {
+        if (loadedStationExists) station = loadedStation;
+        stationExists = loadedStationExists;
+    }
     cout << "Data loaded" << endl;
     return true;
 }
+ 
 
 int main()
 {
@@ -312,8 +327,13 @@ int main()
                 else cout << "Add pipe or station first" << endl;
                 break;
             case 7:
-                loadData(pipe, station, pipeExists, stationExists);
+            {
+                int choice = readInt(
+                    "1. Load pipe\n2. Load station\n3. Load all saved objects\nEnter choice: ",
+                    "Wrong choice. Enter 1, 2 or 3: ", 1, 3);
+                loadData(pipe, station, pipeExists, stationExists, choice);
                 break;
+            }
             case 0:
                 cout << "Exit" << endl;
                 break;
